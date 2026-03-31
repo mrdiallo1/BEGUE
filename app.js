@@ -145,3 +145,21 @@ function updateUI(listeBandes) {
         `;
     });
 }
+window.ouvrirDetails = (id, nom) => {
+    // Masquer toutes les sections
+    document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+    
+    // Afficher la section détails (que tu as créée dans l'étape précédente)
+    const viewDetails = document.getElementById('view-details');
+    if (viewDetails) {
+        viewDetails.style.display = 'block';
+        // Lancer la récupération de l'historique
+        chargerHistoriqueBande(id, nom);
+    }
+};
+
+// Fonction pour revenir en arrière
+window.retourSuivi = () => {
+    document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+    document.getElementById('view-tracks').style.display = 'block';
+};
