@@ -37,3 +37,17 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; us
 .nav-item i { font-size: 20px; }
 
 .btn-small { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; }
+.card-bande:active {
+    transform: scale(0.98);
+    background-color: #f9f9f9;
+    transition: 0.1s;
+}
+
+.card-activity {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
