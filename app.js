@@ -106,3 +106,42 @@ window.creerNouvelleBande = async function() {
 
 // Lancer le chargement
 chargerDonneesReelles();
+
+function updateUI(listeBandes) {
+    const container = document.getElementById('list-bandes');
+    if (!container) return;
+
+    if (listeBandes.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#999; margin-top:20px;">Aucune bande active.</p>';
+        return;
+    }
+
+    container.innerHTML = ''; // On vide le message de chargement
+    
+    listeBandes.forEach(b => {
+        // On calcule le taux de perte pour le style
+        const perte = b.startQty - b.currentQty;
+        
+        container.innerHTML += `
+            <div class="card-bande" onclick="ouvrirDetails('${b.id}', '${b.name}')" 
+                 style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; box-shadow:0 4px 6px rgba(0,0,0,0.05); border-left:5px solid #27ae60; cursor:pointer;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="margin:0; color:#2c3e50;">${b.name}</h3>
+                        <small style="color:#7f8c8d;">Lancée le : ${b.createdAt ? b.createdAt.toDate().toLocaleDateString() : '...'}</small>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="font-size:1.2rem; font-weight:bold; color:#27ae60;">${b.currentQty}</span>
+                        <div style="font-size:0.7rem; color:#e74c3c;">-${perte} têtes</div>
+                    </div>
+                </div>
+                <div style="margin-top:10px; font-size:0.85rem; color:#34495e;">
+                    <strong>Dépenses :</strong> ${b.expenses ? b.expenses.toLocaleString() : 0} CFA
+                </div>
+                <div style="text-align:right; font-size:0.8rem; color:#3498db; margin-top:5px;">
+                    Voir l'historique <i class="fa-solid fa-chevron-right"></i>
+                </div>
+            </div>
+        `;
+    });
+}
