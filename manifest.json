@@ -16,7 +16,7 @@
       "purpose": "any"
     }
   ],
-  "start_url": "/BEGUE/index.html",
+  "start_url": "/index.html",
   "scope": "/BEGUE/",
   "display": "standalone",
   "orientation": "portrait",
