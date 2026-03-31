@@ -1,0 +1,39 @@
+:root {
+    --primary: #27AE60; /* Vert Production */
+    --accent: #F1C40F;  /* Jaune Poussin */
+    --danger: #E74C3C;
+    --dark: #2C3E50;
+    --bg: #F4F7F6;
+    --white: #FFFFFF;
+}
+
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; user-select: none; }
+
+/* AUTH / PIN SCREEN */
+.auth-overlay { position: fixed; inset: 0; background: var(--primary); z-index: 2000; display: flex; justify-content: center; align-items: center; color: white; }
+.auth-container { text-align: center; width: 80%; }
+.logo-area { font-size: 60px; margin-bottom: 10px; }
+.pin-dots { display: flex; justify-content: center; gap: 15px; margin: 30px 0; }
+.pin-dots span { width: 15px; height: 15px; border: 2px solid white; border-radius: 50%; }
+.pin-dots span.filled { background: white; }
+
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.keypad button { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; padding: 20px; border-radius: 50%; width: 70px; height: 70px; margin: auto; }
+.keypad button:active { background: white; color: var(--primary); }
+
+/* MAIN UI */
+.main-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; background: white; }
+.user-badge { background: var(--primary); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+
+.content-area { padding: 20px; }
+.balance-card { background: var(--dark); color: white; padding: 25px; border-radius: 20px; margin-bottom: 20px; }
+.quick-stats { display: flex; gap: 15px; }
+.stat-box { background: white; flex: 1; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+/* BOTTOM NAV */
+.bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 480px; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #eee; }
+.nav-item { border: none; background: none; color: #999; display: flex; flex-direction: column; align-items: center; font-size: 11px; gap: 4px; cursor: pointer; }
+.nav-item.active { color: var(--primary); }
+.nav-item i { font-size: 20px; }
+
+.btn-small { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; }

@@ -1,0 +1,22 @@
+{
+  "short_name": "BegePoulet",
+  "name": "Bégé Poulet - Gestion Elevage",
+  "icons": [
+    {
+      "src": "IMG_4256.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "IMG_4256.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/index.html",
+  "background_color": "#ffffff",
+  "theme_color": "#27ae60",
+  "display": "standalone",
+  "scope": "/",
+  "description": "Gestion de la ferme Bégé Poulet pour les associés."
+}
