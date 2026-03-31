@@ -1,25 +1,16 @@
 {
   "short_name": "BegePoulet",
   "name": "Bégé Poulet - Gestion Elevage",
-  "description": "Application de gestion pour l'élevage Bégé Poulet.",
   "icons": [
     {
       "src": "IMG_4256.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "IMG_4256.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     }
   ],
-  "start_url": "/index.html",
-  "scope": "/BEGUE/",
+  "start_url": "index.html",
+  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#27ae60"
 }
