@@ -3,14 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bégé Poulet - ERP Agricole</title>
+    <title>BegePoulet - Gestion d'Élevage</title>
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BegePoulet">
+    <meta name="theme-color" content="#27ae60">
+
+    <link rel="apple-touch-icon" href="IMG_4256.png">
+    <link rel="icon" type="image/png" href="IMG_4256.png">
     <link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="IMG_4256.png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" 
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+          crossorigin="anonymous" 
+          referrerpolicy="no-referrer">
+
+          <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
+        /* Ajoute ceci pour éviter le zoom automatique sur iPhone quand on clique sur un input */
+        input, select, textarea {
+            font-size: 16px !important;
+        }
+        /* Style pour la zone sécurisée des iPhones récents (encoche) */
+        body {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
         /* --- TON DESIGN (Identique à la maquette que tu as validée) --- */
         :root { --primary: #27AE60; --primary-dark: #1E8449; --accent: #F39C12; --danger: #E74C3C; --dark: #2C3E50; --text-muted: #7F8C8D; --bg: #F4F7F6; --card-bg: #FFFFFF; --radius-lg: 24px; --radius-md: 16px; --shadow: 0 8px 20px rgba(0,0,0,0.06); }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
@@ -337,9 +359,9 @@
             <label>Type de dépense (Ta Liste)</label>
             <select id="exp-type">
                 <optgroup label="Alimentation">
-                    <option>Aliment 4SAC D + 6SAC KBC</option>
-                    <option>Aliment Maïs 8 sacs</option>
-                    <option>Aliment KBC 2 + 150kg Maïs</option>
+                    <option>Aliment KBC</option>
+                    <option>Aliment Maïs </option>
+                    <option>Aliment KBC 2 </option>
                 </optgroup>
                 <optgroup label="Santé & Hygiène">
                     <option>Vaccin J1 (Premier jour)</option>
@@ -349,7 +371,7 @@
                     <option>Lavage des endroits (Désinfection)</option>
                 </optgroup>
                 <optgroup label="Logistique & Autres">
-                    <option>Charbon (3 sacs)</option>
+                    <option>Charbon</option>
                     <option>Transport Poussins / Maïs</option>
                     <option>Loyer Maison / Gardiennage</option>
                     <option>Main-d'œuvre</option>
@@ -394,9 +416,9 @@
 
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, where, serverTimestamp, doc, updateDoc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, where, serverTimestamp, doc, updateDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // CONFIGURATION
+    // --- CONFIGURATION FIREBASE ---
     const firebaseConfig = {
         apiKey: "AIzaSyAkfiKolE2zZoqZfLCtSvmcgcwwXuR5jsE",
         authDomain: "bege-poulet.firebaseapp.com",
@@ -412,7 +434,7 @@
     let localUser = localStorage.getItem('bege_user_name') || null;
     let localPin = localStorage.getItem('bege_user_pin') || null;
     let currentPinInput = "";
-    let bandesGlobales = []; 
+    let bandesGlobales = [];
 
     document.getElementById('date-display').innerText = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -423,177 +445,194 @@
         document.getElementById('current-user').innerText = localUser;
     }
 
-    // --- SETUP & PIN ---
-    document.getElementById('btn-save-setup').addEventListener('click', async () => {
-        const name = document.getElementById('setup-name').value;
-        const balance = document.getElementById('setup-balance').value;
-        const pin = document.getElementById('setup-pin').value;
-        if (name && balance && pin.length === 4) {
-            localStorage.setItem('bege_user_name', name);
-            localStorage.setItem('bege_user_pin', pin);
-            localStorage.setItem('bege_initial_balance', balance);
-            await addDoc(collection(db, "logs"), { action: "Création de la base Bégé Poulet", user: name, createdAt: serverTimestamp() });
-            location.reload();
-        } else { alert("Remplis tout !"); }
-    });
-
-    window.pressKey = function(num) {
-        if (currentPinInput.length < 4) {
-            currentPinInput += num;
-            document.querySelectorAll('.pin-dots span')[currentPinInput.length - 1].classList.add('filled');
+    // --- CLAVIER (PIN + CAISSE) ---
+    window.pressKey = (val) => {
+        if (document.getElementById('pin-screen').style.display === 'flex') {
+            if (currentPinInput.length < 4) {
+                currentPinInput += val;
+                const dots = document.querySelectorAll('.pin-dots span');
+                if(dots[currentPinInput.length - 1]) dots[currentPinInput.length - 1].classList.add('filled');
+            }
+            if (currentPinInput.length === 4) {
+                setTimeout(() => {
+                    if (currentPinInput === localPin) {
+                        document.getElementById('pin-screen').style.display = 'none';
+                        document.getElementById('app-main').style.display = 'block';
+                        chargerDonneesFirebase();
+                    } else {
+                        alert("Code PIN incorrect !"); window.clearPin();
+                    }
+                }, 200);
+            }
+            return;
         }
-        if (currentPinInput.length === 4) {
-            setTimeout(() => {
-                if (currentPinInput === localPin) {
-                    document.getElementById('pin-screen').style.display = 'none';
-                    document.getElementById('app-main').style.display = 'block';
-                    chargerDonneesFirebase(); 
-                } else { alert("Code incorrect !"); clearPin(); }
-            }, 200);
+
+        const display = document.getElementById('sale-amount') || document.getElementById('amount-display');
+        if (display) {
+            if (val === 'clear') display.value = '';
+            else if (val === 'back') display.value = display.value.slice(0, -1);
+            else if (display.value.length < 8) display.value += val;
         }
     };
-    window.clearPin = function() {
+
+    window.clearPin = () => {
         currentPinInput = "";
         document.querySelectorAll('.pin-dots span').forEach(s => s.classList.remove('filled'));
     };
 
-    // --- NAVIGATION ---
-    window.switchTab = function(tabId) {
+    // --- NAVIGATION ET MODALS ---
+    window.switchTab = (tabId) => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-' + tabId).classList.add('active');
+        const targetView = document.getElementById('view-' + tabId);
+        if(targetView) targetView.classList.add('active');
+
         document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-        document.getElementById('tab-' + tabId).classList.add('active');
-        const titles = { 'home': 'Caisse & Synthèse', 'tracks': 'Suivi des Bandes', 'stock': 'Inventaire', 'admin': 'Traçabilité' };
-        document.getElementById('page-title').innerText = titles[tabId];
+        document.getElementById('tab-' + tabId)?.classList.add('active');
     };
 
-    window.openModal = function(id, bandeId = null) {
-        const modal = document.getElementById(id);
-        if (modal) {
-            modal.style.display = 'flex';
-            if (bandeId) {
-                if(document.getElementById('exp-bande-id')) document.getElementById('exp-bande-id').value = bandeId;
-                if(document.getElementById('dead-bande-id')) document.getElementById('dead-bande-id').value = bandeId;
-                if(document.getElementById('sell-bande-id')) document.getElementById('sell-bande-id').value = bandeId;
-            }
+    window.openModal = (id, bandeId = null) => {
+        document.getElementById(id).style.display = 'flex';
+        if (bandeId) {
+            ['exp-bande-id', 'dead-bande-id', 'sell-bande-id'].forEach(fieldId => {
+                const el = document.getElementById(fieldId);
+                if(el) el.value = bandeId;
+            });
         }
     };
-    window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
+    window.closeModal = (id) => { document.getElementById(id).style.display = 'none'; };
 
     async function logAction(actionText) {
         await addDoc(collection(db, "logs"), { action: actionText, user: localUser, createdAt: serverTimestamp() });
     }
 
-    // --- MODIF 1: CREATION BANDE (AJOUT TYPE POULET) ---
-    document.getElementById('btn-create-bande').addEventListener('click', async () => {
-        const name = document.getElementById('b-name').value;
-        const qty = parseInt(document.getElementById('b-qty').value);
-        const cost = parseInt(document.getElementById('b-cost').value);
-        if(name && qty && cost) {
-            await addDoc(collection(db, "productions"), { 
-                name: name, 
-                type: "poulet", // CRUCIAL pour le filtre
-                startQty: qty, 
-                currentQty: qty, 
-                soldQty: 0, 
-                dead: 0, 
-                expenses: cost, 
-                revenue: 0, 
-                createdAt: serverTimestamp() 
-            });
-            await logAction(`Lancement: ${name} (${qty} têtes)`);
-            closeModal('modal-bande');
-        }
-    });
-
-    // --- MODIF 2: CHARGEMENT AVEC FILTRE ---
+    // --- CHARGEMENT DES DONNÉES ---
     function chargerDonneesFirebase() {
-        // On ne prend que les documents où type == "poulet"
         const qBandes = query(collection(db, "productions"), where("type", "==", "poulet"), orderBy("createdAt", "desc"));
         
         onSnapshot(qBandes, (snapshot) => {
             const listContainer = document.getElementById('list-bandes');
-            if (listContainer) listContainer.innerHTML = '';
-            
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
             bandesGlobales = [];
-            let totalExpenses = 0;
-            let totalRevenue = 0;
+            let totalRev = 0; let totalExp = 0;
 
             snapshot.forEach((docSnap) => {
-                const b = docSnap.data();
-                b.id = docSnap.id;
+                const b = docSnap.data(); b.id = docSnap.id;
                 bandesGlobales.push(b);
-                
-                totalExpenses += (b.expenses || 0);
-                totalRevenue += (b.revenue || 0);
+                totalRev += (b.revenue || 0); totalExp += (b.expenses || 0);
 
-                if (listContainer) {
-                    listContainer.insertAdjacentHTML('beforeend', `
-        <div class="bande-card" onclick="ouvrirHistoriqueBande('${b.id}', '${b.name}')" style="cursor:pointer; border-left: 5px solid ${b.currentQty > 0 ? '#F39C12' : '#27AE60'}">
-            <div class="bande-header">
-                <h3>${b.name}</h3>
-                <span class="bande-badge">${b.currentQty > 0 ? 'EN COURS' : 'TERMINÉE'}</span>
-            </div>
-            <div class="bande-stats">
-                <div><p>Restants</p><strong>${b.currentQty}</strong></div>
-                <div><p>Investi</p><strong>${(b.expenses || 0).toLocaleString()}</strong></div>
-                <div><p>Ventes</p><strong style="color:var(--primary)">${(b.revenue || 0).toLocaleString()}</strong></div>
-            </div>
-            <div style="text-align:right; font-size:11px; color:var(--primary); margin-top:5px;">
-                Voir l'historique détaillé <i class="fa-solid fa-chevron-right"></i>
+                // Design de la carte Bande embelli
+                listContainer.insertAdjacentHTML('beforeend', `
+    <div class="bande-card" style="background:white; border-radius:15px; margin-bottom:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05); border-left: 6px solid ${b.currentQty > 0 ? '#f39c12' : '#27ae60'}; overflow:hidden;">
+        
+        <div style="padding:15px; cursor:pointer;" onclick="toggleDetails('${b.id}')">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h3 style="margin:0; font-size:1.2rem; color:#2c3e50;">${b.name}</h3>
+                    <small style="color:#7f8c8d;">Cliquer pour voir l'historique</small>
+                </div>
+                <span style="background:${b.currentQty > 0 ? '#fcf3cf' : '#d5f5e3'}; color:${b.currentQty > 0 ? '#f39c12' : '#27ae60'}; padding:5px 12px; border-radius:20px; font-size:0.8rem; font-weight:bold;">
+                    ${b.currentQty > 0 ? 'EN COURS' : 'TERMINÉE'}
+                </span>
             </div>
         </div>
-    `);
-});
-            // Calcul du solde (Balance Initiale + Revenus - Dépenses)
-            const initial = parseInt(localStorage.getItem('bege_initial_balance')) || 0;
-            const soldeActuel = initial + totalRevenue - totalExpenses;
-            document.getElementById('global-balance').innerText = soldeActuel.toLocaleString('fr-FR') + " CFA";
 
+        <div style="display:flex; justify-content:space-between; padding:15px; background:#fdfdfd; border-top:1px solid #f1f2f6;">
+            <div onclick="ouvrirModalEdition('${b.id}', 'currentQty', ${b.currentQty}, 'Quantité restante')" style="text-align:center; flex:1; cursor:pointer;">
+                <p style="margin:0; font-size:0.8rem; color:#7f8c8d;">Restants <i class="fa-solid fa-pen" style="color:#bdc3c7;"></i></p>
+                <strong style="font-size:1.2rem; color:#2c3e50;">${b.currentQty}</strong>
+            </div>
+            <div style="width:1px; background:#f1f2f6;"></div>
+            <div onclick="ouvrirModalEdition('${b.id}', 'expenses', ${b.expenses}, 'Dépenses')" style="text-align:center; flex:1; cursor:pointer;">
+                <p style="margin:0; font-size:0.8rem; color:#7f8c8d;">Investi <i class="fa-solid fa-pen" style="color:#bdc3c7;"></i></p>
+                <strong style="font-size:1.2rem; color:#e74c3c;">${(b.expenses || 0).toLocaleString()}</strong>
+            </div>
+            <div style="width:1px; background:#f1f2f6;"></div>
+            <div onclick="ouvrirModalEdition('${b.id}', 'revenue', ${b.revenue}, 'Ventes')" style="text-align:center; flex:1; cursor:pointer;">
+                <p style="margin:0; font-size:0.8rem; color:#7f8c8d;">Ventes <i class="fa-solid fa-pen" style="color:#bdc3c7;"></i></p>
+                <strong style="font-size:1.2rem; color:#27ae60;">${(b.revenue || 0).toLocaleString()}</strong>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; padding:15px; background:#fff; border-top:1px solid #f1f2f6;">
+            <button onclick="openModal('modal-sell', '${b.id}')" style="flex:1; background:#27ae60; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:0.9rem;">
+                <i class="fa-solid fa-cart-shopping"></i> Vendre
+            </button>
+            <button onclick="openModal('modal-dead', '${b.id}')" style="flex:1; background:#e74c3c; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:0.9rem;">
+                <i class="fa-solid fa-skull"></i> Perte
+            </button>
+            <button onclick="openModal('modal-expense', '${b.id}')" style="flex:1; background:#f39c12; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:0.9rem;">
+                <i class="fa-solid fa-money-bill"></i> Dépense
+            </button>
+        </div>
+
+        <div id="details-${b.id}" style="display:none; padding:15px; background:#f4f6f7; border-top:1px solid #e5e8e8;">
+            <h4 style="margin-top:0; font-size:0.9rem; color:#34495e;">Historique de la bande</h4>
+            <div id="list-act-${b.id}" style="font-size:0.85rem; color:#555;">Chargement...</div>
+        </div>
+    </div>
+`);
+            });
+            const initial = parseInt(localStorage.getItem('bege_initial_balance')) || 0;
+            document.getElementById('global-balance').innerText = (initial + totalRev - totalExp).toLocaleString() + " CFA";
+            
+            // Appel des graphiques
             renderAdvancedCharts(bandesGlobales);
         });
 
-        // Écoute des Logs
+        // CHARGEMENT STOCK + BOUTON SUPPRIMER
+        onSnapshot(query(collection(db, "stocks"), orderBy("date", "desc")), (snapshot) => {
+            const container = document.getElementById('list-inventory');
+            if (!container) return;
+            container.innerHTML = "";
+            snapshot.forEach(docSnap => {
+                const s = docSnap.data();
+                container.innerHTML += `
+                    <div style="background:white; padding:15px; border-radius:12px; margin-bottom:12px; border-left:5px solid #3498db; box-shadow: 0 4px 10px rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
+                                <div style="background:#eaf2f8; padding:8px; border-radius:8px; color:#3498db;"><i class="fa-solid fa-box"></i></div>
+                                <strong style="font-size:1.1rem; color:#2c3e50;">${s.article}</strong>
+                            </div>
+                            <small style="color:#7f8c8d;">Valeur : ${s.prixTotal.toLocaleString()} CFA</small>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                            <span style="background:#3498db; color:white; padding:4px 12px; border-radius:20px; font-size:0.85rem; font-weight:bold;">${s.quantite} Unités</span>
+                            <button onclick="supprimerStock('${docSnap.id}', '${s.article}')" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:1.1rem;"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>`;
+            });
+        });
+
         onSnapshot(query(collection(db, "logs"), orderBy("createdAt", "desc")), (snapshot) => {
             const logsContainer = document.getElementById('full-logs');
             if (logsContainer) {
                 logsContainer.innerHTML = '';
-                snapshot.forEach((doc) => {
+                snapshot.forEach(doc => {
                     const l = doc.data();
-                    let time = l.createdAt ? l.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
-                    logsContainer.insertAdjacentHTML('beforeend', `
-                        <div class="log-item" style="display:flex; gap:10px; margin-bottom:8px; background:white; padding:10px; border-radius:8px;">
-                            <i class="fa-solid fa-user-pen" style="color:var(--primary)"></i>
-                            <div><h4 style="font-size:13px; margin:0;">${l.action}</h4><p style="font-size:10px; color:gray; margin:0;">${l.user} • ${time}</p></div>
-                        </div>
-                    `);
-                });
-            }
-        });
-
-        // --- MODIF 3: ECOUTE DU STOCK SEPARÉ ---
-        onSnapshot(collection(db, "stocks"), (snapshot) => {
-            const container = document.getElementById('inventory-list');
-            if (container) {
-                container.innerHTML = "";
-                snapshot.forEach(docSnap => {
-                    const s = docSnap.data();
-                    container.innerHTML += `
-                        <div class="card" style="margin-bottom:10px; padding:15px; background:white; border-radius:10px; border-left:4px solid #3498db;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong>${s.article}</strong>
-                                <span style="background:#3498db; color:white; padding:3px 10px; border-radius:10px; font-size:12px;">${s.quantite} Sacs/Utés</span>
-                            </div>
-                            <small style="color:gray;">Achat: ${s.prixTotal.toLocaleString()} CFA</small>
-                        </div>
-                    `;
+                    const time = l.createdAt ? l.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
+                    logsContainer.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee; font-size:0.9rem;"><b>${time}</b> - ${l.action} <span style="color:#aaa; font-size:0.7rem;">(${l.user})</span></div>`;
                 });
             }
         });
     }
 
-    // --- GESTION DES EVENEMENTS (DEPENSES, MORTS, VENTES) ---
-    document.getElementById('btn-add-expense').addEventListener('click', async () => {
+    // --- ACTIONS BOUTONS (VENTES, PERTES, DEPENSES RESTAURÉS) ---
+    
+    // Nouvelle Bande
+    document.getElementById('btn-create-bande')?.addEventListener('click', async () => {
+        const name = document.getElementById('b-name').value;
+        const qty = parseInt(document.getElementById('b-qty').value);
+        const cost = parseInt(document.getElementById('b-cost').value);
+        if(name && qty >= 0) {
+            await addDoc(collection(db, "productions"), { name, type: "poulet", startQty: qty, currentQty: qty, soldQty: 0, dead: 0, expenses: cost, revenue: 0, createdAt: serverTimestamp() });
+            await logAction(`Nouvelle bande: ${name}`);
+            closeModal('modal-bande');
+        }
+    });
+
+    // Enregistrer Dépense
+    document.getElementById('btn-add-expense')?.addEventListener('click', async () => {
         const id = document.getElementById('exp-bande-id').value;
         const amount = parseInt(document.getElementById('exp-amount').value);
         if(amount && id) {
@@ -604,144 +643,209 @@
         }
     });
 
-    document.getElementById('btn-add-dead').addEventListener('click', async () => {
+    // Enregistrer Perte
+    document.getElementById('btn-add-dead')?.addEventListener('click', async () => {
         const id = document.getElementById('dead-bande-id').value;
         const qty = parseInt(document.getElementById('dead-qty').value);
         if(qty && id) {
             const b = bandesGlobales.find(x => x.id === id);
-            await updateDoc(doc(db, "productions", id), { 
-                dead: (b.dead || 0) + qty, 
-                currentQty: (b.currentQty || 0) - qty 
-            });
+            await updateDoc(doc(db, "productions", id), { dead: (b.dead || 0) + qty, currentQty: (b.currentQty || 0) - qty });
             await logAction(`Perte: ${qty} morts sur ${b.name}`);
             closeModal('modal-dead');
         }
     });
 
-    document.getElementById('btn-add-sale').addEventListener('click', async () => {
+    // Enregistrer Vente
+    document.getElementById('btn-add-sale')?.addEventListener('click', async () => {
         const id = document.getElementById('sell-bande-id').value;
         const qty = parseInt(document.getElementById('sell-qty').value);
         const price = parseInt(document.getElementById('sell-price').value);
         if(id && qty && price) {
             const b = bandesGlobales.find(x => x.id === id);
-            const totalVente = qty * price;
-            await updateDoc(doc(db, "productions", id), {
-                revenue: (b.revenue || 0) + totalVente,
-                currentQty: (b.currentQty || 0) - qty,
-                soldQty: (b.soldQty || 0) + qty
-            });
-            await logAction(`Vente: ${qty} têtes | +${totalVente} CFA`);
+            const total = qty * price;
+            await updateDoc(doc(db, "productions", id), { revenue: (b.revenue || 0) + total, currentQty: (b.currentQty || 0) - qty, soldQty: (b.soldQty || 0) + qty });
+            await logAction(`Vente: ${qty} têtes | +${total} CFA`);
             closeModal('modal-sell');
         }
     });
 
-    // --- ENREGISTRER STOCK ---
-    document.getElementById('btn-save-stock').addEventListener('click', async () => {
+    // Ajouter au Stock
+    document.getElementById('btn-save-stock')?.addEventListener('click', async () => {
         const item = document.getElementById('st-item').value;
         const qty = parseInt(document.getElementById('st-qty').value);
         const cost = parseInt(document.getElementById('st-cost').value);
-        if (qty && cost) {
+        if (item && qty >= 0) {
             await addDoc(collection(db, "stocks"), { article: item, quantite: qty, prixTotal: cost, date: serverTimestamp() });
-            await logAction(`Magasin: ${item} (${qty}) | -${cost} CFA`);
+            await logAction(`Achat Stock: ${item} x${qty}`);
             closeModal('modal-stock-add');
         }
     });
 
-    // --- GRAPHIQUES ---
+    // Supprimer du Stock
+    window.supprimerStock = async (id, nom) => {
+        if(confirm(`⚠️ Voulez-vous vraiment supprimer l'article "${nom}" du stock ?`)) {
+            await deleteDoc(doc(db, "stocks", id));
+            await logAction(`Suppression du stock : ${nom}`);
+        }
+    };
+
+    // --- NOUVELLE FONCTION: MODIFICATION JOLIE (CUSTOM MODAL) ---
+    window.ouvrirModalEdition = (id, champ, valeurActuelle, titre) => {
+        const overlay = document.createElement('div');
+        overlay.id = "custom-edit-modal";
+        overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:9999; padding:20px; backdrop-filter: blur(3px);";
+        
+        overlay.innerHTML = `
+            <div style="background:white; padding:25px; border-radius:20px; width:100%; max-width:350px; box-shadow:0 15px 30px rgba(0,0,0,0.2); text-align:center;">
+                <div style="background:#eaf2f8; width:50px; height:50px; border-radius:25px; display:flex; justify-content:center; align-items:center; margin:0 auto 15px; color:#3498db; font-size:1.5rem;">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </div>
+                <h3 style="margin:0 0 5px 0; color:#2c3e50; font-size:1.2rem;">Corriger le chiffre</h3>
+                <p style="margin:0 0 20px 0; color:#7f8c8d; font-size:0.9rem;">${titre}</p>
+                
+                <input type="number" id="edit-input-val" value="${valeurActuelle}" style="width:100%; padding:15px; margin-bottom:20px; border:2px solid #3498db; border-radius:12px; font-size:1.5rem; text-align:center; font-weight:bold; color:#2c3e50; outline:none; box-sizing:border-box;">
+                
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button onclick="document.getElementById('custom-edit-modal').remove()" style="padding:12px; border:none; border-radius:10px; background:#ecf0f1; color:#7f8c8d; font-weight:bold; width:50%; cursor:pointer;">Annuler</button>
+                    <button onclick="validerModification('${id}', '${champ}')" style="padding:12px; border:none; border-radius:10px; background:#27ae60; color:white; font-weight:bold; width:50%; cursor:pointer;">Enregistrer</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        document.getElementById('edit-input-val').focus();
+    };
+
+    window.validerModification = async (id, champ) => {
+        const val = document.getElementById('edit-input-val').value;
+        if(val !== "") {
+            await updateDoc(doc(db, "productions", id), { [champ]: parseInt(val) });
+            await logAction(`Correction manuelle appliquée`);
+            document.getElementById('custom-edit-modal').remove();
+        }
+    };
+
+    // --- GRAPHIQUES (RESTAURÉS) ---
     function renderAdvancedCharts(bandes) {
-        let totalAlive = 0; let totalDead = 0; let totalSold = 0;
-        bandes.forEach(b => { 
-            totalAlive += (b.currentQty || 0); 
-            totalDead += (b.dead || 0); 
-            totalSold += (b.soldQty || 0);
+    if (typeof Chart === 'undefined' || bandes.length === 0) return;
+
+    let totalAlive = 0, totalDead = 0, totalSold = 0;
+    let totalInvesti = 0, totalRevenu = 0;
+
+    bandes.forEach(b => { 
+        totalAlive += (b.currentQty || 0); 
+        totalDead += (b.dead || 0); 
+        totalSold += (b.soldQty || 0);
+        totalInvesti += (b.expenses || 0);
+        totalRevenu += (b.revenue || 0);
+    });
+
+    // --- 1. GRAPHE SURVIE (Déjà existant) ---
+    const ctxSurv = document.getElementById('chart-survival');
+    if (ctxSurv) {
+        if (window.survChart) window.survChart.destroy();
+        window.survChart = new Chart(ctxSurv, {
+            type: 'doughnut',
+            data: {
+                labels: ['Sains', 'Pertes'],
+                datasets: [{ data: [(totalAlive + totalSold), totalDead], backgroundColor: ['#27ae60', '#e74c3c'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
         });
-
-        // Graphe Survie
-        const ctxSurv = document.getElementById('chart-survival');
-        if (ctxSurv) {
-            if (window.survChart) window.survChart.destroy();
-            window.survChart = new Chart(ctxSurv, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Sains (Restants + Vendus)', 'Pertes'],
-                    datasets: [{
-                        data: [(totalAlive + totalSold), totalDead],
-                        backgroundColor: ['#27ae60', '#e74c3c'],
-                        borderWidth: 0, cutout: '75%'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-            });
-        }
-
-        // Graphe Flux
-        const ctxFlow = document.getElementById('chart-flow');
-        if (ctxFlow) {
-            if (window.flowChart) window.flowChart.destroy();
-            window.flowChart = new Chart(ctxFlow, {
-                type: 'line',
-                data: {
-                    labels: bandes.map(b => b.name).reverse(),
-                    datasets: [
-                        { label: 'Revenus', data: bandes.map(b => b.revenue || 0).reverse(), borderColor: '#27ae60', tension: 0.4 },
-                        { label: 'Dépenses', data: bandes.map(b => b.expenses || 0).reverse(), borderColor: '#e74c3c', tension: 0.4 }
-                    ]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
     }
 
-    // --- RESET TOTAL ---
-    window.reinitialisationTotale = async function() {
-        if (!confirm("⚠️ Tout supprimer ?")) return;
-        try {
-            const pSnap = await getDocs(collection(db, "productions"));
-            pSnap.docs.forEach(async (d) => await deleteDoc(doc(db, "productions", d.id)));
-            const lSnap = await getDocs(collection(db, "logs"));
-            lSnap.docs.forEach(async (d) => await deleteDoc(doc(db, "logs", d.id)));
-            const sSnap = await getDocs(collection(db, "stocks"));
-            sSnap.docs.forEach(async (d) => await deleteDoc(doc(db, "stocks", d.id)));
-            
-            localStorage.clear();
-            alert("Application remise à zéro.");
-            location.reload();
-        } catch (e) { alert("Erreur"); }
-    };
-
-    window.modifierDirectement = async function(id, champ, valeur) {
-        const v = parseInt(valeur.replace(/\D/g, '')) || 0;
-        await updateDoc(doc(db, "productions", id), { [champ]: v });
-    };
-
-        window.ouvrirHistoriqueBande = async (bandeId, nomBande) => {
-    switchTab('details'); // On change de vue
-    document.getElementById('detail-title').innerText = nomBande;
-    const container = document.getElementById('bande-history-list');
-    container.innerHTML = '<p style="text-align:center;">Chargement...</p>';
-
-    // On va chercher dans une collection "activites" (à créer lors des ventes/dépenses)
-    const q = query(collection(db, "activites"), where("bandeId", "==", bandeId), orderBy("createdAt", "desc"));
-    
-    onSnapshot(q, (snapshot) => {
-        container.innerHTML = '';
-        snapshot.forEach(doc => {
-            const act = doc.data();
-            const color = act.type === 'vente' ? '#27ae60' : (act.type === 'perte' ? '#e74c3c' : '#f39c12');
-            const icon = act.type === 'vente' ? 'trending-up' : (act.type === 'perte' ? 'skull' : 'cart-shopping');
-            
-            container.innerHTML += `
-                <div class="log-item" style="border-left: 4px solid ${color}">
-                    <div class="log-icon"><i class="fa-solid fa-${icon}" style="color:${color}"></i></div>
-                    <div style="flex:1">
-                        <div style="display:flex; justify-content:space-between">
-                            <strong>${act.label || act.type}</strong>
-                            <b style="color:${color}">${act.montant ? act.montant.toLocaleString() + ' CFA' : act.qty + ' têtes'}</b>
-                        </div>
-                        <small>${act.createdAt?.toDate().toLocaleDateString('fr-FR')}</small>
-                    </div>
-                </div>`;
+    // --- 2. GRAPHE FLUX FINANCIER (Déjà existant) ---
+    const ctxFlow = document.getElementById('chart-flow');
+    if (ctxFlow) {
+        if (window.flowChart) window.flowChart.destroy();
+        window.flowChart = new Chart(ctxFlow, {
+            type: 'line',
+            data: {
+                labels: bandes.map(b => b.name).reverse(),
+                datasets: [
+                    { label: 'Ventes', data: bandes.map(b => b.revenue || 0).reverse(), borderColor: '#27ae60', tension: 0.4, fill: true, backgroundColor: 'rgba(39, 174, 96, 0.1)' },
+                    { label: 'Investi', data: bandes.map(b => b.expenses || 0).reverse(), borderColor: '#e74c3c', tension: 0.4, fill: true, backgroundColor: 'rgba(231, 76, 60, 0.1)' }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
         });
+    }
+
+    // --- 3. LE 3ème GRAPHE: RÉPARTITION BUDGET (Celui qui manquait) ---
+    const ctxBudget = document.getElementById('chart-budget');
+    if (ctxBudget) {
+        if (window.budgetChart) window.budgetChart.destroy();
+        
+        // On calcule la part de chaque bande dans le budget total investi
+        const labelsBandes = bandes.map(b => b.name);
+        const depensesParBande = bandes.map(b => b.expenses || 0);
+
+        window.budgetChart = new Chart(ctxBudget, {
+            type: 'pie', // Ou 'polarArea' pour un style plus moderne
+            data: {
+                labels: labelsBandes,
+                datasets: [{
+                    data: depensesParBande,
+                    backgroundColor: ['#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#1abc9c', '#34495e'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 12, font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+}
+
+    window.toggleDetails = (id) => {
+        const el = document.getElementById(`details-${id}`);
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        if(el.style.display === 'block') window.chargerActivitesBande(id);
+    };
+
+    
+   // --- CORRECTION HISTORIQUE ---
+window.chargerActivitesBande = (bandeId) => {
+    const container = document.getElementById(`list-act-${bandeId}`);
+    if (!container) return;
+    
+    // On récupère les infos de la bande pour avoir son nom exact
+    const bande = bandesGlobales.find(b => b.id === bandeId);
+    const nomBande = bande ? bande.name : "";
+
+    const q = query(collection(db, "logs"), orderBy("createdAt", "desc"));
+    
+    onSnapshot(q, (snap) => {
+        container.innerHTML = "";
+        let count = 0;
+
+        snap.forEach(d => {
+            const l = d.data();
+            const action = l.action || "";
+            
+            // On vérifie si le log contient l'ID ou le NOM de la bande
+            if (action.includes(bandeId) || (nomBande && action.includes(nomBande))) {
+                count++;
+                const dateFormatee = l.createdAt ? l.createdAt.toDate().toLocaleDateString('fr-FR', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : "Récent";
+                
+                container.innerHTML += `
+                    <div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:white; margin-top:5px; border-radius:8px;">
+                        <span style="color:#2c3e50; font-size:0.85rem;">${action.split(' sur ')[0]}</span>
+                        <small style="color:#bdc3c7; font-size:0.7rem;">${dateFormatee}</small>
+                    </div>`;
+            }
+        });
+
+        if (count === 0) {
+            container.innerHTML = `<p style="text-align:center; color:#95a5a6; font-size:0.8rem; padding:10px;">Aucune activité enregistrée pour cette bande.</p>`;
+        }
     });
 };
 </script>
