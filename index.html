@@ -633,15 +633,48 @@
 
     // Enregistrer Dépense
     document.getElementById('btn-add-expense')?.addEventListener('click', async () => {
-        const id = document.getElementById('exp-bande-id').value;
-        const amount = parseInt(document.getElementById('exp-amount').value);
-        if(amount && id) {
-            const b = bandesGlobales.find(x => x.id === id);
-            await updateDoc(doc(db, "productions", id), { expenses: (b.expenses || 0) + amount });
-            await logAction(`Dépense: ${amount} CFA sur ${b.name}`);
+    // 1. Récupération des éléments
+    const idEl = document.getElementById('exp-bande-id');
+    const amountEl = document.getElementById('exp-amount');
+    const typeEl = document.getElementById('exp-type');
+
+    // Vérification de sécurité : si un champ manque dans le HTML, on arrête tout
+    if (!idEl || !amountEl || !typeEl) {
+        console.error("Erreur : Un des champs du formulaire est introuvable dans le HTML.");
+        return;
+    }
+
+    const id = idEl.value;
+    const amount = parseInt(amountEl.value);
+    const typeDepense = typeEl.options[typeEl.selectedIndex].text;
+    
+    // On cherche la bande correspondante dans nos données locales
+    const b = bandesGlobales.find(x => x.id === id);
+
+    if (amount > 0 && b) {
+        try {
+            // Mise à jour dans Firebase
+            const docRef = doc(db, "productions", id);
+            await updateDoc(docRef, { 
+                expenses: (b.expenses || 0) + amount 
+            });
+
+            // Enregistrement du log (Historique)
+            await logAction(`${typeDepense} : ${amount.toLocaleString()} CFA sur ${b.name}`);
+
+            // Nettoyage et fermeture
+            amountEl.value = "";
             closeModal('modal-expense');
+            alert("✅ Dépense enregistrée avec succès !");
+            
+        } catch (error) {
+            console.error("Erreur Firebase:", error);
+            alert("❌ Erreur lors de l'enregistrement. Vérifie ta connexion.");
         }
-    });
+    } else {
+        alert(" Veuillez entrer un montant correct.");
+    }
+});
 
     // Enregistrer Perte
     document.getElementById('btn-add-dead')?.addEventListener('click', async () => {
