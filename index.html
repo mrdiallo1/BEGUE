@@ -519,26 +519,22 @@
 
                 if (listContainer) {
                     listContainer.insertAdjacentHTML('beforeend', `
-                        <div class="bande-card" style="border-left: 5px solid ${b.currentQty > 0 ? '#F39C12' : '#27AE60'}">
-                            <div class="bande-header">
-                                <h3>${b.name}</h3>
-                                <span class="bande-badge">${b.currentQty > 0 ? 'EN COURS' : 'TERMINÉE'}</span>
-                            </div>
-                            <div class="bande-stats">
-                                <div><p>Restants</p><strong>${b.currentQty}</strong></div>
-                                <div><p>Investi</p><strong>${(b.expenses || 0).toLocaleString()}</strong></div>
-                                <div><p>Ventes</p><strong style="color:var(--primary)">${(b.revenue || 0).toLocaleString()}</strong></div>
-                            </div>
-                            <div class="bande-actions" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-top:10px;">
-                                <button style="background:rgba(243,156,18,0.1); color:#D68910; border:none; padding:8px; border-radius:5px;" onclick="openModal('modal-expense', '${b.id}')">Dépense</button>
-                                <button style="background:rgba(39, 174, 96, 0.1); color:var(--primary); border:none; padding:8px; border-radius:5px;" onclick="openModal('modal-sell', '${b.id}')">Vendre</button>
-                                <button style="background:rgba(231,76,60,0.1); color:var(--danger); border:none; padding:8px; border-radius:5px;" onclick="openModal('modal-dead', '${b.id}')">Perte</button>
-                            </div>
-                        </div>
-                    `);
-                }
-            });
-
+        <div class="bande-card" onclick="ouvrirHistoriqueBande('${b.id}', '${b.name}')" style="cursor:pointer; border-left: 5px solid ${b.currentQty > 0 ? '#F39C12' : '#27AE60'}">
+            <div class="bande-header">
+                <h3>${b.name}</h3>
+                <span class="bande-badge">${b.currentQty > 0 ? 'EN COURS' : 'TERMINÉE'}</span>
+            </div>
+            <div class="bande-stats">
+                <div><p>Restants</p><strong>${b.currentQty}</strong></div>
+                <div><p>Investi</p><strong>${(b.expenses || 0).toLocaleString()}</strong></div>
+                <div><p>Ventes</p><strong style="color:var(--primary)">${(b.revenue || 0).toLocaleString()}</strong></div>
+            </div>
+            <div style="text-align:right; font-size:11px; color:var(--primary); margin-top:5px;">
+                Voir l'historique détaillé <i class="fa-solid fa-chevron-right"></i>
+            </div>
+        </div>
+    `);
+});
             // Calcul du solde (Balance Initiale + Revenus - Dépenses)
             const initial = parseInt(localStorage.getItem('bege_initial_balance')) || 0;
             const soldeActuel = initial + totalRevenue - totalExpenses;
@@ -707,6 +703,37 @@
         const v = parseInt(valeur.replace(/\D/g, '')) || 0;
         await updateDoc(doc(db, "productions", id), { [champ]: v });
     };
+
+        window.ouvrirHistoriqueBande = async (bandeId, nomBande) => {
+    switchTab('details'); // On change de vue
+    document.getElementById('detail-title').innerText = nomBande;
+    const container = document.getElementById('bande-history-list');
+    container.innerHTML = '<p style="text-align:center;">Chargement...</p>';
+
+    // On va chercher dans une collection "activites" (à créer lors des ventes/dépenses)
+    const q = query(collection(db, "activites"), where("bandeId", "==", bandeId), orderBy("createdAt", "desc"));
+    
+    onSnapshot(q, (snapshot) => {
+        container.innerHTML = '';
+        snapshot.forEach(doc => {
+            const act = doc.data();
+            const color = act.type === 'vente' ? '#27ae60' : (act.type === 'perte' ? '#e74c3c' : '#f39c12');
+            const icon = act.type === 'vente' ? 'trending-up' : (act.type === 'perte' ? 'skull' : 'cart-shopping');
+            
+            container.innerHTML += `
+                <div class="log-item" style="border-left: 4px solid ${color}">
+                    <div class="log-icon"><i class="fa-solid fa-${icon}" style="color:${color}"></i></div>
+                    <div style="flex:1">
+                        <div style="display:flex; justify-content:space-between">
+                            <strong>${act.label || act.type}</strong>
+                            <b style="color:${color}">${act.montant ? act.montant.toLocaleString() + ' CFA' : act.qty + ' têtes'}</b>
+                        </div>
+                        <small>${act.createdAt?.toDate().toLocaleDateString('fr-FR')}</small>
+                    </div>
+                </div>`;
+        });
+    });
+};
 </script>
 </body>
 </html>
