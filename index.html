@@ -678,29 +678,95 @@
 
     // Enregistrer Perte
     document.getElementById('btn-add-dead')?.addEventListener('click', async () => {
-        const id = document.getElementById('dead-bande-id').value;
-        const qty = parseInt(document.getElementById('dead-qty').value);
-        if(qty && id) {
-            const b = bandesGlobales.find(x => x.id === id);
-            await updateDoc(doc(db, "productions", id), { dead: (b.dead || 0) + qty, currentQty: (b.currentQty || 0) - qty });
-            await logAction(`Perte: ${qty} morts sur ${b.name}`);
-            closeModal('modal-dead');
+    const id = document.getElementById('dead-bande-id').value;
+    const qtyInput = document.getElementById('dead-qty');
+    const qty = parseInt(qtyInput.value);
+    
+    // On cherche la bande correspondante
+    const b = bandesGlobales.find(x => x.id === id);
+
+    if (id && qty > 0 && b) {
+        // --- SÉCURITÉ : VÉRIFICATION DU STOCK DISPONIBLE ---
+        if (qty > b.currentQty) {
+            alert(`⚠️ Impossible de déclarer ${qty} morts !\nIl n'en reste que ${b.currentQty} dans cette bande.`);
+            qtyInput.style.border = "2px solid #e74c3c";
+            return; // On arrête tout
         }
-    });
+
+        try {
+            // Mise à jour dans Firebase
+            await updateDoc(doc(db, "productions", id), { 
+                dead: (b.dead || 0) + qty, 
+                currentQty: (b.currentQty || 0) - qty 
+            });
+
+            // Enregistrement du log pour l'historique
+            await logAction(`Perte : ${qty} morts sur ${b.name}`);
+
+            // Nettoyage et fermeture
+            qtyInput.value = "";
+            qtyInput.style.border = "1px solid #ccc";
+            closeModal('modal-dead');
+            alert("✅ Perte enregistrée.");
+
+        } catch (error) {
+            console.error("Erreur perte:", error);
+            alert("Erreur lors de l'enregistrement.");
+        }
+    } else {
+        alert("Veuillez entrer un nombre de morts valide.");
+    }
+});
 
     // Enregistrer Vente
-    document.getElementById('btn-add-sale')?.addEventListener('click', async () => {
-        const id = document.getElementById('sell-bande-id').value;
-        const qty = parseInt(document.getElementById('sell-qty').value);
-        const price = parseInt(document.getElementById('sell-price').value);
-        if(id && qty && price) {
-            const b = bandesGlobales.find(x => x.id === id);
-            const total = qty * price;
-            await updateDoc(doc(db, "productions", id), { revenue: (b.revenue || 0) + total, currentQty: (b.currentQty || 0) - qty, soldQty: (b.soldQty || 0) + qty });
-            await logAction(`Vente: ${qty} têtes | +${total} CFA`);
-            closeModal('modal-sell');
+   document.getElementById('btn-add-sale')?.addEventListener('click', async () => {
+    const id = document.getElementById('sell-bande-id').value;
+    const qtyInput = document.getElementById('sell-qty');
+    const priceInput = document.getElementById('sell-price');
+    
+    const qty = parseInt(qtyInput.value);
+    const price = parseInt(priceInput.value);
+    
+    // 1. On cherche la bande pour connaître le stock actuel
+    const b = bandesGlobales.find(x => x.id === id);
+
+    if (b) {
+        // --- SÉCURITÉ : VÉRIFICATION DU STOCK ---
+        if (qty > b.currentQty) {
+            alert(`⚠️ Impossible de vendre ${qty} poulets !\nIl n'en reste que ${b.currentQty} dans cette bande.`);
+            qtyInput.style.border = "2px solid #e74c3c"; // On colorie en rouge pour montrer l'erreur
+            return; // On arrête tout ici, rien n'est enregistré
         }
-    });
+
+        if (qty > 0 && price > 0) {
+            const totalVente = qty * price;
+            try {
+                // 2. Mise à jour des chiffres (puisqu'on a assez de stock)
+                await updateDoc(doc(db, "productions", id), { 
+                    revenue: (b.revenue || 0) + totalVente, 
+                    currentQty: (b.currentQty || 0) - qty, 
+                    soldQty: (b.soldQty || 0) + qty 
+                });
+
+                // 3. Log pour l'historique
+                await logAction(`Vente : ${qty} têtes (${totalVente.toLocaleString()} CFA) sur ${b.name}`);
+
+                // 4. Nettoyage et fermeture
+                qtyInput.value = "";
+                priceInput.value = "";
+                qtyInput.style.border = "1px solid #ccc"; 
+                closeModal('modal-sell');
+                alert("✅ Vente enregistrée avec succès !");
+
+            } catch (error) {
+                console.error("Erreur vente:", error);
+                alert("Erreur lors de l'enregistrement.");
+            }
+        } else {
+            alert("Veuillez remplir les champs avec des chiffres valides.");
+        }
+    }
+});
 
     // Ajouter au Stock
     document.getElementById('btn-save-stock')?.addEventListener('click', async () => {
