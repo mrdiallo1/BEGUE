@@ -506,49 +506,7 @@
     }
 
 
-    window.reinitialisationTotale = async () => {
-    // PREMIÈRE SÉCURITÉ
-    const confirmation1 = confirm("⚠️ ATTENTION : Tu es sur le point de TOUT EFFACER (Bandes, Ventes, Dépenses, Historique).\n\nEs-tu certain de vouloir recommencer une nouvelle saison ?");
-    
-    if (confirmation1) {
-        // DEUXIÈME SÉCURITÉ (Code PIN pour confirmer)
-        const checkPin = prompt("Pour confirmer l'effacement total, saisis ton code PIN :");
-        
-        if (checkPin === localPin) {
-            try {
-                // 1. On récupère toutes les bandes
-                const querySnapshot = await getDocs(collection(db, "productions"));
-                const deletePromises = [];
-                querySnapshot.forEach((docSnap) => {
-                    deletePromises.push(deleteDoc(doc(db, "productions", docSnap.id)));
-                });
-
-                // 2. On récupère tous les logs
-                const logsSnapshot = await getDocs(collection(db, "logs"));
-                logsSnapshot.forEach((docSnap) => {
-                    deletePromises.push(deleteDoc(doc(db, "logs", docSnap.id)));
-                });
-
-                // 3. On attend que toutes les suppressions soient terminées
-                await Promise.all(deletePromises);
-
-                // 4. On réinitialise la balance locale si nécessaire
-                localStorage.setItem('bege_initial_balance', '0');
-
-                await logAction("♻️ RÉINITIALISATION TOTALE : Nouvelle saison démarrée.");
-                
-                alert("✅ Tout a été effacé avec succès. L'application est prête pour une nouvelle saison !");
-                window.location.reload(); // On recharge pour vider les graphiques
-
-            } catch (error) {
-                console.error("Erreur lors de la suppression :", error);
-                alert("Erreur lors de la suppression des données. Vérifie ta connexion.");
-            }
-        } else {
-            alert("❌ Code PIN incorrect. Action annulée.");
-        }
-    }
-};
+  
     // --- CHARGEMENT DES DONNÉES ---
     function chargerDonneesFirebase() {
         const qBandes = query(collection(db, "productions"), where("type", "==", "poulet"), orderBy("createdAt", "desc"));
@@ -660,6 +618,50 @@
             }
         });
     }
+
+      window.reinitialisationTotale = async () => {
+    // PREMIÈRE SÉCURITÉ
+    const confirmation1 = confirm("⚠️ ATTENTION : Tu es sur le point de TOUT EFFACER (Bandes, Ventes, Dépenses, Historique).\n\nEs-tu certain de vouloir recommencer une nouvelle saison ?");
+    
+    if (confirmation1) {
+        // DEUXIÈME SÉCURITÉ (Code PIN pour confirmer)
+        const checkPin = prompt("Pour confirmer l'effacement total, saisis ton code PIN :");
+        
+        if (checkPin === localPin) {
+            try {
+                // 1. On récupère toutes les bandes
+                const querySnapshot = await getDocs(collection(db, "productions"));
+                const deletePromises = [];
+                querySnapshot.forEach((docSnap) => {
+                    deletePromises.push(deleteDoc(doc(db, "productions", docSnap.id)));
+                });
+
+                // 2. On récupère tous les logs
+                const logsSnapshot = await getDocs(collection(db, "logs"));
+                logsSnapshot.forEach((docSnap) => {
+                    deletePromises.push(deleteDoc(doc(db, "logs", docSnap.id)));
+                });
+
+                // 3. On attend que toutes les suppressions soient terminées
+                await Promise.all(deletePromises);
+
+                // 4. On réinitialise la balance locale si nécessaire
+                localStorage.setItem('bege_initial_balance', '0');
+
+                await logAction("♻️ RÉINITIALISATION TOTALE : Nouvelle saison démarrée.");
+                
+                alert("✅ Tout a été effacé avec succès. L'application est prête pour une nouvelle saison !");
+                window.location.reload(); // On recharge pour vider les graphiques
+
+            } catch (error) {
+                console.error("Erreur lors de la suppression :", error);
+                alert("Erreur lors de la suppression des données. Vérifie ta connexion.");
+            }
+        } else {
+            alert("❌ Code PIN incorrect. Action annulée.");
+        }
+    }
+};
 
     // --- ACTIONS BOUTONS (VENTES, PERTES, DEPENSES RESTAURÉS) ---
     
@@ -991,6 +993,34 @@ window.chargerActivitesBande = (bandeId) => {
         }
     });
 };
+
+// --- LOGIQUE DE L'ÉCRAN DE CONFIGURATION (SETUP) ---
+document.getElementById('btn-save-setup')?.addEventListener('click', () => {
+    const name = document.getElementById('setup-name').value;
+    const balance = document.getElementById('setup-balance').value;
+    const pin = document.getElementById('setup-pin').value;
+
+    // Vérification : tous les champs doivent être remplis
+    if (name && balance && pin.length === 4) {
+        // 1. On enregistre tes infos dans la mémoire du téléphone (localStorage)
+        localStorage.setItem('bege_user_name', name);
+        localStorage.setItem('bege_user_pin', pin);
+        localStorage.setItem('bege_initial_balance', balance);
+
+        // 2. On cache l'écran de config et on montre l'écran du Code PIN
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('pin-screen').style.display = 'flex';
+        
+        // 3. On met à jour le nom affiché sur l'écran PIN
+        document.getElementById('current-user').innerText = name;
+        
+        // On rafraîchit pour que tout soit bien pris en compte
+        alert("✅ Configuration réussie ! Bienvenue " + name);
+        window.location.reload(); 
+    } else {
+        alert("⚠️ Remplis bien tout : Ton nom, l'argent en caisse et un code PIN à 4 chiffres !");
+    }
+});
 </script>
 </body>
 </html>
